@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 .venv/
 .DS_Store
+lecture3/out/
+lecture3/data/
