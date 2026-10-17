@@ -29,3 +29,7 @@ pause:
 # Execute with the chosen provider, collect results, and release compute.
 run file *args:
     GPU_PROVIDER="{{provider}}" MODAL_GPU="{{gpu}}" bash tools/provider.sh run "$@"
+
+# Capture CUDA activity, print timing summaries, and save an Nsight Systems report.
+profile file *args:
+    GPU_PROVIDER="{{provider}}" MODAL_GPU="{{gpu}}" bash tools/provider.sh profile "$@"

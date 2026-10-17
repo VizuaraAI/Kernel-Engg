@@ -37,20 +37,24 @@ def main():
     arguments = args.arguments
     if arguments[:1] == ['--']:
         arguments = arguments[1:]
+    profiling = os.environ.get('GPU_PROFILE') == '1'
     gpu = os.environ.get('MODAL_GPU') or 'L4'
     run_id = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ') + '-' + uuid.uuid4().hex[:8]
     results = ROOT / 'results' / run_id
     results.mkdir(parents=True)
-    metadata = dict(provider='modal', requested_gpu=gpu, source=str(source))
+    metadata = dict(provider='modal', requested_gpu=gpu, source=str(source), profiled=profiling)
     sb = None
     status = 1
     try:
         image = (modal.Image.from_registry('nvidia/cuda:13.0.0-devel-ubuntu24.04', add_python='3.12')
                  .entrypoint([])
-                 .pip_install('cupy-cuda13x==14.2.0', 'numpy==2.3.5', 'numba-cuda==0.30.4')
-                 .add_local_dir(source.parent, '/workspace/src', ignore=[
+                 .pip_install('cupy-cuda13x==14.2.0', 'numpy==2.3.5', 'numba-cuda==0.30.4'))
+        if profiling:
+            image = (image.apt_install('cuda-nsight-systems-13-0')
+                     .add_local_file(ROOT / 'tools/profile.sh', '/opt/gpu-profile.sh', copy=True))
+        image = image.add_local_dir(source.parent, '/workspace/src', ignore=[
                      '**/.git/**', '**/.venv/**', '**/__pycache__/**', '**/results/**',
-                     '/bin/**', '/lib/**', 'pyvenv.cfg', '.gpu.json', '.env', '.env.*']))
+                     '/bin/**', '/lib/**', 'pyvenv.cfg', '.gpu.json', '.env', '.env.*'])
         with modal.enable_output():
             app = modal.App.lookup('kernel-engg-runner', create_if_missing=True)
             sb = modal.Sandbox.create('sleep', 'infinity', app=app, image=image, gpu=gpu, timeout=300,
@@ -62,11 +66,12 @@ def main():
             setup = ['bash', '-lc', 'mkdir -p /workspace/results && nvidia-smi --query-gpu=name --format=csv,noheader']
             status = execute(sb, setup, log)
             if status == 0:
+                profile_prefix = 'bash /opt/gpu-profile.sh ' if profiling else ''
                 if source.suffix == '.cu':
-                    cmd = ('nvcc -O3 ' + shlex.quote('./' + source.name) + ' -o /workspace/program && '
-                           + shlex.join(['/workspace/program', *arguments]))
+                    cmd = ('nvcc -O3 ' + ('-lineinfo ' if profiling else '') + shlex.quote('./' + source.name) + ' -o /workspace/program && '
+                           + profile_prefix + shlex.join(['/workspace/program', *arguments]))
                 else:
-                    cmd = shlex.join(['python', './' + source.name, *arguments])
+                    cmd = profile_prefix + shlex.join(['python', './' + source.name, *arguments])
                 status = execute(sb, ['bash', '-lc',
                     'export GPU_RESULTS_DIR=/workspace/results CUDA_HOME=/usr/local/cuda; '
                     'export LD_LIBRARY_PATH=/usr/local/cuda/lib64:${LD_LIBRARY_PATH:-}; ' + cmd], log)

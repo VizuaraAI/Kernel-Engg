@@ -129,3 +129,13 @@ this accommodates rotating keys but cannot detect server impersonation.
 
 Programs that already manage Modal themselves, such as `lecture3/dog.py`, use
 their lecture's documented `modal run` command instead of `just run`.
+
+## Profile GPU execution
+
+```bash
+just profile lecture4/vecadd.cu
+```
+
+Prints kernel and memory-transfer timing summaries in the terminal and saves
+Nsight Systems reports in `results/<run-id>/artifacts/profile/`. Compute is
+released afterward. See [profiling setup and limitations](tools/GPU.md#profile-from-the-terminal).

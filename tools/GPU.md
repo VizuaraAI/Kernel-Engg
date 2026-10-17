@@ -117,3 +117,46 @@ References:
 - https://modal.com/docs/guide/cuda
 - https://docs.jarvislabs.ai/cli
 - https://just.systems/man/en/
+
+## Profile from the terminal
+
+Use Nsight Systems to capture kernel launches and memory transfers:
+
+```bash
+just profile lecture4/vecadd.cu
+just provider=modal gpu=H100 profile lecture3/dog.py
+just provider=jarvis profile lecture4/vecadd.cu
+```
+
+`dog.py` requires the standalone adaptation from the `dog-just-workflow` branch.
+The command prints kernel and memory-transfer timing tables, downloads the
+`.nsys-rep` report, and releases compute using the same lifecycle as `just run`.
+Profiling changes execution timings; use `just run` for ordinary benchmarks.
+
+Reports are saved in `results/<run-id>/artifacts/profile/`:
+
+- `summary.txt`: terminal timing tables.
+- `kernels.csv`: kernel names, counts and timing statistics.
+- `trace.nsys-rep`: full report for later inspection.
+- `version.txt`: profiler version used.
+
+Modal builds a separate profiling image with NVIDIA's CUDA-13-matched Nsight
+Systems package. Normal runs do not install Nsight. Jarvis requires `nsys` on the
+VM; if missing, install the matching Nsight Systems package from NVIDIA before
+retrying. On Ubuntu VMs with NVIDIA's CUDA apt repository configured, for example:
+
+```bash
+# Run on the Jarvis VM; match the package to its CUDA version.
+sudo apt-get update
+sudo apt-get install cuda-nsight-systems-13-0
+nsys --version
+```
+
+CPU sampling and context-switch tracing are disabled. CUDA tracing can still be
+restricted by the provider/driver; empty captures or profiler failures return a
+nonzero status instead of claiming successful profiling. Jarvis permissions have
+not been live-tested. Cleanup still runs after profiling failure.
+
+The `Time (%)` column is each kernel's share of captured kernel time, not overall
+GPU utilization. These reports do not calculate SM occupancy or sample GPU-wide
+utilization. No local Nsight installation or GUI is needed for terminal summaries.

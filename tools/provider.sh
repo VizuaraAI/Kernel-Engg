@@ -40,6 +40,7 @@ if [[ "$ACTION" == setup ]]; then
     save_setting provider "$BACKEND"
     exit 0
 fi
+if [[ "$ACTION" == profile ]]; then export GPU_PROFILE=1; ACTION=run; fi
 if [[ "$BACKEND" == jarvis ]]; then exec bash "$ROOT/tools/gpu.sh" "$ACTION" "$@"; fi
 [[ -x "$ROOT/.venv/bin/python" ]] || { echo 'Run just setup modal first.' >&2; exit 1; }
 if [[ "$ACTION" == status ]]; then
