@@ -5,13 +5,13 @@ fail() { echo "Error: $*" >&2; exit 1; }
 need() { command -v "$1" >/dev/null || fail "Missing $1. See tools/GPU.md for installation."; }
 need jl
 need jq
-NAME=${JARVIS_INSTANCE_NAME:-running-first-kernel-code}
+NAME=${JARVIS_INSTANCE_NAME:-}
 USER_NAME=${JARVIS_SSH_USER:-ubuntu}
 IDENTITY=${JARVIS_SSH_KEY:-$HOME/.ssh/id_ed25519}
 if [[ -f "$ROOT/.gpu.json" ]]; then
-    NAME=${JARVIS_INSTANCE_NAME:-$(jq -er .name "$ROOT/.gpu.json")}
-    USER_NAME=${JARVIS_SSH_USER:-$(jq -er .user "$ROOT/.gpu.json")}
-    IDENTITY=${JARVIS_SSH_KEY:-$(jq -er .identity "$ROOT/.gpu.json")}
+    NAME=${JARVIS_INSTANCE_NAME:-$(jq -r '.name // empty' "$ROOT/.gpu.json")}
+    USER_NAME=${JARVIS_SSH_USER:-$(jq -r '.user // "ubuntu"' "$ROOT/.gpu.json")}
+    IDENTITY=${JARVIS_SSH_KEY:-$(jq -r '.identity // "~/.ssh/id_ed25519"' "$ROOT/.gpu.json")}
 fi
 IDENTITY=${IDENTITY/#\~/$HOME}
 [[ "$USER_NAME" =~ ^[a-z_][a-z0-9_-]*$ ]] || fail 'Invalid SSH username'
@@ -22,6 +22,7 @@ if [[ "$ACTION" == setup ]]; then
     echo 'Setup complete. Run: just status'
     exit 0
 fi
+[[ -n "$NAME" ]] || fail 'Configure your instance with just setup jarvis or set JARVIS_INSTANCE_NAME.'
 case "$ACTION" in status|resume|pause|run) ;; *) fail "Unknown command: $ACTION";; esac
 if [[ "$ACTION" == run ]]; then
     [[ $# -ge 1 ]] || fail 'Usage: just run path/to/kernel.cu [arguments...]'

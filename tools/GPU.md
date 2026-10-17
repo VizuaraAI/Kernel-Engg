@@ -1,105 +1,119 @@
-# Run kernels on JarvisLabs with just
+# Run GPU kernels with just: Modal or JarvisLabs
+
+Modal is the default provider, with one L4 GPU. Kernel files do not need Modal
+annotations: the provider adapter runs standalone CUDA/C++ (`.cu`) and Python
+(`.py`) programs. Python programs that already orchestrate Modal apps themselves
+(such as `lecture3/dog.py`) should still use their original `modal run` workflow.
 
 ## One-time setup on your Mac
 
+Install just, jq and uv, then authenticate your chosen provider:
+
 ```bash
-brew install just jq rsync
+brew install just jq uv
+just setup modal
+```
+
+Modal setup creates the project's `.venv`, installs `tools/requirements-modal.txt`
+there, and opens Modal's login flow. No global pip installation or shell activation
+is needed. Container dependencies are separately installed in the Modal image.
+Only the provider being used needs its SDK/CLI installed.
+
+For Jarvis, install rsync and the official CLI into an isolated tool environment:
+
+```bash
+brew install rsync
 uv tool install jarvislabs
-just setup
+just setup jarvis
 ssh-add ~/.ssh/id_ed25519
 ```
 
-Install `uv` first if needed: https://docs.astral.sh/uv/getting-started/installation/.
-Enter your Jarvis API token only in `jl setup`'s interactive prompt, not in Git or
-chat. Tokens are available at https://jarvislabs.ai/settings/api-keys.
-The official `jl` CLI manages its own Python runtime through uv; our runner is Bash
-and does not require activating a local Python environment.
+Jarvis setup prompts for your API token through `jl setup`, then your exact unique
+instance name. Do not share tokens or commit them. Local provider and instance
+settings are stored in ignored `.gpu.json`; existing Jarvis settings are preserved.
 
-The default instance is `running-first-kernel-code`, user `ubuntu`, private key
-`~/.ssh/id_ed25519`. Keep the instance name unique and unchanged across resumes.
-Existing ignored `.gpu.json` settings are still supported. Environment variables
-`JARVIS_INSTANCE_NAME`, `JARVIS_SSH_USER`, and `JARVIS_SSH_KEY` override them.
+## Run and switch providers
 
-## Everyday use
+From this checkout:
 
 ```bash
-just status
-just resume                         # optional: manually start compute billing
+just provider modal                 # save default provider locally
 just run lecture4/vecadd.cu
 just run lecture4/maxpool2d.py
-just run lecture4/vecadd.cu -- 4096   # forward arguments to the program
-just pause                          # optional: manually pause
+just run lecture4/vecadd.cu -- 4096   # forward program arguments
+
+just provider=jarvis run lecture4/vecadd.cu  # override for one run
+just provider=modal gpu=L4 run lecture4/vecadd.cu
+just provider jarvis                # save Jarvis as default
+just status
 ```
 
-Run from this checkout. `just` also finds the justfile from subdirectories; file
-arguments are relative to the repository root. Absolute source paths work too,
-including sources in your main checkout:
+`GPU_PROVIDER` and `MODAL_GPU` environment variables also provide overrides.
+The GPU override applies only to Modal; Jarvis uses its instance's existing GPU.
+`just` finds the justfile from subdirectories; source paths are relative to the
+repository root. Absolute source paths work too. Never run concurrent jobs on the
+same Jarvis instance: each run pauses it afterward.
 
-```bash
-just run /Users/utkarshparekh/Kernel-Engg/lecture4/vecadd.cu
-```
+## Shared behavior
 
-Every run:
+- Upload the source directory, including sibling headers; files outside it are
+  not uploaded. Git metadata, virtual environments and results are excluded.
+- Compile `.cu` with `nvcc -O3`; execute only after compilation succeeds.
+- Execute `.py` with the provider's remote Python environment.
+- Stream output and save logs, provider metadata and `exit-code.txt` under
+  `results/<run-id>/`. `just` reports failure with its own nonzero status.
+- Write exported files to the remote `$GPU_RESULTS_DIR` to download them into
+  `results/<run-id>/artifacts/`. Files elsewhere are not collected.
+- Attempt compute cleanup on success, failure or Ctrl+C. Force-kill, power loss,
+  or lost network/API access can prevent cleanup; check the provider dashboard.
 
-1. Fetches the current instance ID and IP by exact name with `jl list --json`.
-2. Resumes a paused instance automatically, then waits through Creating/Resuming and temporary SSH connection failures, then
-   compiles and executes a tiny CUDA kernel before uploading. `just resume`
-   performs the same check after Jarvis reports Running. Failed instances and
-   authentication failures stop execution immediately. `just run` starts compute
-   billing when it resumes an instance.
-3. Syncs the source file's directory to a fresh remote run directory with rsync.
-4. Compiles `.cu` with `/usr/local/cuda/bin/nvcc -O3` and executes only on success.
-   `.py` uses `/home/ubuntu/cuda-workspace/.venv/bin/python`, the environment set up
-   earlier. Override with `JARVIS_REMOTE_PYTHON` for another remote interpreter.
-5. Streams combined stdout/stderr and saves `results/<run-id>/run.log`, metadata,
-   and `exit-code.txt`. Artifacts written to the remote `$GPU_RESULTS_DIR` are
-   downloaded to `results/<run-id>/artifacts/`, even after program failure.
+Provider filesystem differences: Jarvis runs live on its persistent VM;
+Modal runs in a new temporary container and only collected results survive.
 
-The Bash helper preserves the remote program's failure code (also saved in
-`exit-code.txt`); `just` reports recipe failures with its own nonzero exit code.
-If the program
-succeeds but artifact transfer fails, the command returns the transfer failure.
-Upload/connection failures stop before execution. Remote run directories are
-retained for inspection; local results are ignored by Git.
+## Modal
 
-After results are collected, `just run` automatically requests pause, even after
-compilation, readiness, transfer or execution failure. Ctrl+C/SIGTERM also trigger
-cleanup. The current machine ID is looked up again before pausing. An instance
-that was already running is also paused after the run; avoid concurrent runs or
-other work on the same instance. Pause failures are reported prominently and make
-a successful run return nonzero. A failing program retains its original failure.
-Force-killing the runner, closing the host, or losing API access can prevent
-cleanup; check the dashboard if the command is interrupted unexpectedly. Jarvis
-pause acceptance is asynchronous; the dashboard may briefly show Pausing.
+Uses a CUDA 13.0 development image, Python 3.12, CuPy 14.2.0, NumPy 2.3.5 and
+Numba CUDA 0.30.4. Images are cached; the first run builds the environment.
+The client SDK is pinned separately in `requirements-modal.txt` and installed
+only in `.venv`. A temporary GPU sandbox is created per execution and explicitly
+terminated after artifacts are collected. It has a 300-second maximum lifetime,
+a 300-second idle timeout and a 240-second execution timeout. No service is deployed.
+The run log records the actual GPU name in addition to the requested GPU in
+metadata. Different GPUs can produce different performance measurements.
 
-## Scope
+Usage is billed to the Modal workspace used for login and may consume credits.
+Timeouts are not a monetary spending cap; configure workspace budgets separately.
+This runner does not automatically fall back to another provider or GPU.
 
-Readiness checks retry every three seconds and stop as soon as CUDA execution
-succeeds. The default timeout is 300 seconds, configurable with
-`JARVIS_READY_TIMEOUT=600 just run lecture4/vecadd.cu`. An in-flight probe can
-extend that limit by its bounded SSH/compiler timeout. Remote GNU `timeout` is
-required alongside nvcc. Readiness checking does not execute your user program;
-the user program is launched once after the check succeeds.
+## JarvisLabs
 
-Supports directly accessible Jarvis VMs with IPv4, SSH port 22, Bash and rsync
-installed remotely. The remote CUDA toolkit and Python dependencies must already
-be installed; new VMs need provisioning separately. Local source filenames must
-use letters, numbers, dots, underscores or hyphens. Sibling headers are synced;
-files outside the source directory are not. Virtual environments, Git metadata,
-results, and common venv bin/lib directories are excluded from uploads.
-Remote programs run with their source directory as the working directory. Write
-exported results to `$GPU_RESULTS_DIR`; files elsewhere remain on the VM.
+`just run` automatically resumes a paused instance, resolves its current ID/IP by
+unique name, waits for SSH and a tiny CUDA kernel to work, syncs sources, runs,
+collects output and requests pause. Even an already-running instance is paused
+at the end. The current ID is resolved again before pausing. Pause API acceptance
+is asynchronous; the dashboard may briefly display Pausing. Cleanup failure is
+reported and makes a successful execution return nonzero.
 
-## SSH host keys
+`just resume` and `just pause` are explicit Jarvis controls regardless of the
+selected default provider. For status while Modal is default, use
+`just provider=jarvis status`.
 
-As explicitly approved for this workflow, the runner disables server host-key
-verification for its SSH and rsync subprocesses. It ignores both user and global
-known-host files, disables DNS host-key verification, and does not save server
-keys. Rotated Jarvis keys therefore do not block resume or execution.
+Configuration overrides: `JARVIS_INSTANCE_NAME`, `JARVIS_SSH_USER` (default ubuntu),
+`JARVIS_SSH_KEY` (default ~/.ssh/id_ed25519), `JARVIS_REMOTE_PYTHON` (default
+/home/ubuntu/cuda-workspace/.venv/bin/python), and `JARVIS_READY_TIMEOUT` (default
+300 seconds). Your instance name has no personal hardcoded default.
 
-This exception does not modify normal SSH settings or existing known-host files.
-It prevents this runner from detecting a server impersonating the Jarvis VM.
-Client authentication still uses your private key. Unlock passphrase-protected
-client keys in your Mac terminal with `ssh-add` when necessary.
+Requires a directly accessible IPv4 VM on SSH port 22, remote Bash, GNU timeout,
+rsync, and `/usr/local/cuda/bin/nvcc`. Python examples need dependencies installed
+in the remote environment; a new VM must be provisioned separately.
 
-References: https://docs.jarvislabs.ai/cli and https://just.systems/man/en/.
+As approved for this workflow, host-key verification is disabled only for the
+runner's SSH/rsync subprocesses. Normal SSH configuration and known_hosts files
+are unchanged. This handles rotating Jarvis server keys, but cannot detect server
+impersonation. Client authentication still uses your private key.
+
+References:
+- https://modal.com/docs/guide/sandboxes
+- https://modal.com/docs/guide/cuda
+- https://docs.jarvislabs.ai/cli
+- https://just.systems/man/en/
