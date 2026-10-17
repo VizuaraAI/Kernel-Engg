@@ -40,7 +40,11 @@ if [[ "$ACTION" == setup ]]; then
     save_setting provider "$BACKEND"
     exit 0
 fi
-if [[ "$ACTION" == profile ]]; then export GPU_PROFILE=1; ACTION=run; fi
+case "$ACTION" in
+    timeline-profile) export GPU_PROFILE=timeline; ACTION=run;;
+    compute-profile) export GPU_PROFILE=compute; ACTION=run;;
+    profile) echo "Use just timeline-profile (Nsight Systems) or just compute-profile (Nsight Compute)." >&2; exit 2;;
+esac
 if [[ "$BACKEND" == jarvis ]]; then exec bash "$ROOT/tools/gpu.sh" "$ACTION" "$@"; fi
 [[ -x "$ROOT/.venv/bin/python" ]] || { echo 'Run just setup modal first.' >&2; exit 1; }
 if [[ "$ACTION" == status ]]; then

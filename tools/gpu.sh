@@ -159,8 +159,10 @@ mkdir -p "$RESULTS"
 printf 'Instance: %s\nID: %s\nIP: %s\nSource: %s/%s\nRemote: %s\n' "$NAME" "$ID" "$IP" "$SOURCE_DIR" "$FILE" "$REMOTE" | tee "$RESULTS/metadata.txt"
 printf 'Profiled: %s\n' "${GPU_PROFILE:-0}" >> "$RESULTS/metadata.txt"
 ssh "${SSH_OPTIONS[@]}" "$TARGET" "mkdir -p '$REMOTE/src' '$REMOTE/results'"
-if [[ ${GPU_PROFILE:-0} == 1 ]]; then
-    cat "$ROOT/tools/profile.sh" | ssh "${SSH_OPTIONS[@]}" "$TARGET" "cat > '$REMOTE/profile.sh'"
+if [[ ${GPU_PROFILE:-0} != 0 ]]; then
+    HELPER=profile.sh
+    if [[ ${GPU_PROFILE:-} == compute ]]; then HELPER=compute-profile.sh; fi
+    cat "$ROOT/tools/$HELPER" | ssh "${SSH_OPTIONS[@]}" "$TARGET" "cat > '$REMOTE/profile.sh'"
 fi
 printf -v SSH_TRANSPORT '%q ' ssh "${SSH_OPTIONS[@]}"
 rsync -az -e "$SSH_TRANSPORT" --exclude .git/ --exclude .venv/ --exclude __pycache__/ \
@@ -169,7 +171,7 @@ rsync -az -e "$SSH_TRANSPORT" --exclude .git/ --exclude .venv/ --exclude __pycac
 # Build remote command with quoted arguments, never interpolate program arguments as shell code.
 COMMAND="cd '$REMOTE/src' && export GPU_RESULTS_DIR='$REMOTE/results' && "
 PROFILE_PREFIX=''
-if [[ ${GPU_PROFILE:-0} == 1 ]]; then PROFILE_PREFIX="bash '$REMOTE/profile.sh' "; fi
+if [[ ${GPU_PROFILE:-0} != 0 ]]; then PROFILE_PREFIX="bash '$REMOTE/profile.sh' "; fi
 if [[ "$FILE" == *.cu ]]; then
     COMMAND+="/usr/local/cuda/bin/nvcc -O3 -lineinfo './$FILE' -o '$REMOTE/program' && "
     printf -v EXECUTION '%q ' "$REMOTE/program" "$@"
@@ -177,6 +179,14 @@ else
     PYTHON=${JARVIS_REMOTE_PYTHON:-/home/$USER_NAME/cuda-workspace/.venv/bin/python}
     COMMAND+='export CUDA_HOME=/usr/local/cuda LD_LIBRARY_PATH=/usr/local/cuda/lib64 && '
     printf -v EXECUTION '%q ' "$PYTHON" "./$FILE" "$@"
+fi
+if [[ ${GPU_PROFILE:-} == compute ]]; then
+    for setting in NCU_KERNEL NCU_LAUNCH_COUNT; do
+        if [[ -n ${!setting:-} ]]; then
+            printf -v quoted '%q' "${!setting}"
+            COMMAND="export $setting=$quoted; $COMMAND"
+        fi
+    done
 fi
 set +e
 ssh "${SSH_OPTIONS[@]}" "$TARGET" "$COMMAND$PROFILE_PREFIX$EXECUTION" 2>&1 | tee "$RESULTS/run.log"

@@ -123,9 +123,9 @@ References:
 Use Nsight Systems to capture kernel launches and memory transfers:
 
 ```bash
-just profile lecture4/vecadd.cu
-just provider=modal gpu=H100 profile lecture3/dog.py
-just provider=jarvis profile lecture4/vecadd.cu
+just timeline-profile lecture4/vecadd.cu
+just provider=modal gpu=H100 timeline-profile lecture3/dog.py
+just provider=jarvis timeline-profile lecture4/vecadd.cu
 ```
 
 `dog.py` requires the standalone adaptation from the `dog-just-workflow` branch.
@@ -154,9 +154,54 @@ nsys --version
 
 CPU sampling and context-switch tracing are disabled. CUDA tracing can still be
 restricted by the provider/driver; empty captures or profiler failures return a
-nonzero status instead of claiming successful profiling. Jarvis permissions have
-not been live-tested. Cleanup still runs after profiling failure.
+nonzero status instead of claiming successful profiling. Jarvis timeline capture was verified on an RTX PRO 6000 VM with CUDA 13.2. Cleanup still runs after profiling failure.
 
 The `Time (%)` column is each kernel's share of captured kernel time, not overall
 GPU utilization. These reports do not calculate SM occupancy or sample GPU-wide
 utilization. No local Nsight installation or GUI is needed for terminal summaries.
+
+
+## Compute profiling from the terminal
+
+`just timeline-profile` captures execution timelines with Nsight Systems.
+`just compute-profile` collects per-kernel hardware metrics with Nsight Compute.
+The old `just profile` recipe has been renamed; use the explicit commands.
+
+```bash
+just compute-profile lecture4/vecadd.cu
+just kernel=rgb_to_gray launches=1 compute-profile lecture3/dog.py
+just provider=jarvis kernel=rgb_to_gray compute-profile lecture3/dog.py
+```
+
+By default, profile one matching launch and exclude `spin`, `empty`, `cupy_fill`
+and `census`. `kernel` accepts an exact function name or `regex:...`; `launches`
+is a positive count of matching launches. Corresponding environment variables
+are `NCU_KERNEL` and `NCU_LAUNCH_COUNT`. All arguments after the source path are
+passed to your program. Warm-up launches are eligible, so choose deliberately
+when interpreting measurements. The rest of the program still executes.
+
+Collects SpeedOfLight, Occupancy and MemoryWorkloadAnalysis sections, including
+compute/memory throughput and occupancy metrics. Results are downloaded to
+`results/<run-id>/artifacts/compute-profile/`: `summary.txt`, `metrics.csv`,
+`metrics.ncu-rep`, `version.txt` and `settings.txt`. Compute metrics describe the
+selected launch, not program-wide GPU utilization. Kernel replay adds substantial
+overhead; do not compare instrumented benchmark timings with ordinary runs.
+
+Modal installs the CUDA-13-matched Nsight Compute package in a separate image.
+Jarvis requires `ncu` on the VM (for a CUDA 13.0 apt installation, the package is
+`cuda-nsight-compute-13-0`). GPU hardware-counter permissions are required. If the
+host returns `ERR_NVGPUCTRPERM`, the command fails with an explanation and releases
+compute; it does not change driver permissions or silently fall back to timelines.
+Empty captures and unmatched filters also return nonzero. Existing five-minute
+sandbox limits and cleanup behavior apply to both profiling modes.
+
+
+### Provider validation
+
+- Modal L4: timeline and compute captures verified with vector addition.
+- Jarvis RTX PRO 6000, CUDA 13.2: timeline capture verified with vector addition
+  after installing `cuda-nsight-systems-13-2` on the VM.
+- The tested Jarvis VM denied unprivileged Nsight Compute counters with
+  `ERR_NVGPUCTRPERM`. The runner saved the error and paused the VM. Compute
+  profiling requires access approved by the VM administrator/provider; installing
+  the CLI alone does not grant counter permissions.

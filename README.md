@@ -133,9 +133,18 @@ their lecture's documented `modal run` command instead of `just run`.
 ## Profile GPU execution
 
 ```bash
-just profile lecture4/vecadd.cu
+just timeline-profile lecture4/vecadd.cu
 ```
 
 Prints kernel and memory-transfer timing summaries in the terminal and saves
 Nsight Systems reports in `results/<run-id>/artifacts/profile/`. Compute is
 released afterward. See [profiling setup and limitations](tools/GPU.md#profile-from-the-terminal).
+
+For per-kernel hardware metrics (subject to provider permissions):
+
+```bash
+just kernel=rgb_to_gray compute-profile lecture3/dog.py
+```
+
+This selects one matching launch. See [compute profiling](tools/GPU.md#compute-profiling-from-the-terminal)
+for filters, metrics and counter-access requirements.

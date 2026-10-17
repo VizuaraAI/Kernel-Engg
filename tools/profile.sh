@@ -9,7 +9,7 @@ if ! command -v nsys >/dev/null; then
     done
 fi
 command -v nsys >/dev/null || {
-    echo 'Nsight Systems CLI (nsys) is missing on this GPU host. Install it from NVIDIA, then retry just profile.' >&2
+    echo 'Nsight Systems CLI (nsys) is missing on this GPU host. Install it from NVIDIA, then retry just timeline-profile.' >&2
     exit 69
 }
 REPORT="$GPU_RESULTS_DIR/profile/trace"

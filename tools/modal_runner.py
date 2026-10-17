@@ -37,12 +37,13 @@ def main():
     arguments = args.arguments
     if arguments[:1] == ['--']:
         arguments = arguments[1:]
-    profiling = os.environ.get('GPU_PROFILE') == '1'
+    profile_mode = os.environ.get('GPU_PROFILE', '')
+    profiling = profile_mode in ('timeline', 'compute', '1')
     gpu = os.environ.get('MODAL_GPU') or 'L4'
     run_id = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ') + '-' + uuid.uuid4().hex[:8]
     results = ROOT / 'results' / run_id
     results.mkdir(parents=True)
-    metadata = dict(provider='modal', requested_gpu=gpu, source=str(source), profiled=profiling)
+    metadata = dict(provider='modal', requested_gpu=gpu, source=str(source), profiled=profiling, profile_mode=profile_mode)
     sb = None
     status = 1
     try:
@@ -50,8 +51,10 @@ def main():
                  .entrypoint([])
                  .pip_install('cupy-cuda13x==14.2.0', 'numpy==2.3.5', 'numba-cuda==0.30.4'))
         if profiling:
-            image = (image.apt_install('cuda-nsight-systems-13-0')
-                     .add_local_file(ROOT / 'tools/profile.sh', '/opt/gpu-profile.sh', copy=True))
+            package = 'cuda-nsight-compute-13-0' if profile_mode == 'compute' else 'cuda-nsight-systems-13-0'
+            helper = 'compute-profile.sh' if profile_mode == 'compute' else 'profile.sh'
+            image = (image.apt_install(package)
+                     .add_local_file(ROOT / 'tools' / helper, '/opt/gpu-profile.sh', copy=True))
         image = image.add_local_dir(source.parent, '/workspace/src', ignore=[
                      '**/.git/**', '**/.venv/**', '**/__pycache__/**', '**/results/**',
                      '/bin/**', '/lib/**', 'pyvenv.cfg', '.gpu.json', '.env', '.env.*'])
@@ -72,6 +75,9 @@ def main():
                            + profile_prefix + shlex.join(['/workspace/program', *arguments]))
                 else:
                     cmd = profile_prefix + shlex.join(['python', './' + source.name, *arguments])
+                if profile_mode == 'compute':
+                    settings = {key: os.environ[key] for key in ('NCU_KERNEL', 'NCU_LAUNCH_COUNT') if key in os.environ}
+                    cmd = ' '.join(f'export {key}={shlex.quote(value)};' for key, value in settings.items()) + ' ' + cmd
                 status = execute(sb, ['bash', '-lc',
                     'export GPU_RESULTS_DIR=/workspace/results CUDA_HOME=/usr/local/cuda; '
                     'export LD_LIBRARY_PATH=/usr/local/cuda/lib64:${LD_LIBRARY_PATH:-}; ' + cmd], log)
