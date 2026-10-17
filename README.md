@@ -13,3 +13,7 @@ sends the code and shows the results, so you need a Modal account and Python 3 o
 | [`lecture3`](lecture3) | Lecture 3: How does a GPU run your code? | Time the lecture's CUDA kernels on a photo of a dog on one H100, and count the warps whose 32 threads disagree at an if. |
 
 We add a folder here after each lecture is taught.
+
+For running local CUDA or Python files on a JarvisLabs VM, see
+[the just GPU runner setup](tools/GPU.md). Once configured, use
+`just run lecture4/vecadd.cu` to sync, compile, run, and save results.
