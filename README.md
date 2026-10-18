@@ -73,6 +73,10 @@ failure. It also pauses an already-running VM; do not share it with concurrent j
 
 ### Jarvis: Python examples only
 
+For Python examples with a `requirements.txt` beside the source (including
+`lecture3/dog.py`), the runner installs those dependencies into the remote venv
+before execution or profiling. Installation runs as the SSH user, before sudo.
+
 Resume the VM and connect using the dashboard's SSH command. With Python 3.12 and
 CUDA 13.x installed, run **on the VM**:
 

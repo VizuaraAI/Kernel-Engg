@@ -177,6 +177,12 @@ if [[ "$FILE" == *.cu ]]; then
     printf -v EXECUTION '%q ' "$REMOTE/program" "$@"
 else
     PYTHON=${JARVIS_REMOTE_PYTHON:-/home/$USER_NAME/cuda-workspace/.venv/bin/python}
+    # Install the example's dependencies into the exact venv used by every mode.
+    # Do this as the SSH user, before Nsight Compute elevates its target.
+    if [[ -f "$SOURCE_DIR/requirements.txt" ]]; then
+        printf -v INSTALL '%q ' "$PYTHON" -m pip install --no-input -r ./requirements.txt
+        COMMAND+="echo 'Preparing remote Python dependencies...' && $INSTALL && "
+    fi
     COMMAND+='export CUDA_HOME=/usr/local/cuda LD_LIBRARY_PATH=/usr/local/cuda/lib64 && '
     printf -v EXECUTION '%q ' "$PYTHON" "./$FILE" "$@"
 fi
