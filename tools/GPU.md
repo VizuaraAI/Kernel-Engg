@@ -205,3 +205,21 @@ sandbox limits and cleanup behavior apply to both profiling modes.
   `ERR_NVGPUCTRPERM`. The runner saved the error and paused the VM. Compute
   profiling requires access approved by the VM administrator/provider; installing
   the CLI alone does not grant counter permissions.
+
+
+## Run all stages with analyze
+
+```bash
+just analyze lecture4/vecadd.cu
+just provider=modal gpu=H100 kernel=rgb_to_gray launches=1 analyze lecture3/dog.py
+```
+
+Runs normal execution, timeline profiling, and compute profiling in that order.
+Provider, GPU, source path, and program arguments apply to all three executions;
+`kernel` and `launches` select the compute capture. The first stage clears any
+inherited profiling flag. Use only that stage for ordinary benchmark timings.
+Each stage saves its own result directory and performs normal provider cleanup.
+The command stops at the first failure, preserving earlier results. On Jarvis,
+this means three resume/pause cycles; compute will fail if counters are blocked.
+No stage is retried or silently skipped. Use the individual commands when you
+only need one profile to avoid extra execution time and cost.

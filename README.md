@@ -148,3 +148,13 @@ just kernel=rgb_to_gray compute-profile lecture3/dog.py
 
 This selects one matching launch. See [compute profiling](tools/GPU.md#compute-profiling-from-the-terminal)
 for filters, metrics and counter-access requirements.
+
+Run the benchmark and both profiles sequentially with one command:
+
+```bash
+just kernel=rgb_to_gray analyze lecture3/dog.py
+```
+
+This executes the program three times and uses more compute than `just run`.
+Each stage prints its own results path and releases compute. Execution stops if
+any stage fails; use the first stage's timings for benchmark comparisons.

@@ -39,3 +39,12 @@ timeline-profile file *args:
 # Collect hardware metrics for selected kernel launches using Nsight Compute.
 compute-profile file *args:
     GPU_PROVIDER="{{provider}}" MODAL_GPU="{{gpu}}" NCU_KERNEL="{{kernel}}" NCU_LAUNCH_COUNT="{{launches}}" bash tools/provider.sh compute-profile "$@"
+
+# Run benchmarks, timeline capture, and compute metrics as separate executions.
+analyze file *args:
+    @echo "[1/3] Normal run: use these benchmark timings"
+    GPU_PROVIDER="{{provider}}" MODAL_GPU="{{gpu}}" GPU_PROFILE=0 bash tools/provider.sh run "$@"
+    @echo "[2/3] Timeline profile: launches and transfers"
+    GPU_PROVIDER="{{provider}}" MODAL_GPU="{{gpu}}" bash tools/provider.sh timeline-profile "$@"
+    @echo "[3/3] Compute profile: selected kernel hardware metrics"
+    GPU_PROVIDER="{{provider}}" MODAL_GPU="{{gpu}}" NCU_KERNEL="{{kernel}}" NCU_LAUNCH_COUNT="{{launches}}" bash tools/provider.sh compute-profile "$@"
