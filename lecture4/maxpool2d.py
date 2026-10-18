@@ -8,7 +8,7 @@ def maxpool2d(input_mat, output_mat, poolsize):
     
     out_n = output_mat.shape[0]
     
-    if out_col > out_n or out_row > out_n:
+    if out_col >= out_n or out_row >= out_n:
         return
     
     # input mat coordinates
