@@ -181,6 +181,7 @@ else
     printf -v EXECUTION '%q ' "$PYTHON" "./$FILE" "$@"
 fi
 if [[ ${GPU_PROFILE:-} == compute ]]; then
+    COMMAND="export GPU_NCU_SUDO=1; $COMMAND"
     for setting in NCU_KERNEL NCU_LAUNCH_COUNT; do
         if [[ -n ${!setting:-} ]]; then
             printf -v quoted '%q' "${!setting}"

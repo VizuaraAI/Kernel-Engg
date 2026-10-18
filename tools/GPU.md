@@ -189,8 +189,15 @@ overhead; do not compare instrumented benchmark timings with ordinary runs.
 
 Modal installs the CUDA-13-matched Nsight Compute package in a separate image.
 Jarvis requires `ncu` on the VM (for a CUDA 13.0 apt installation, the package is
-`cuda-nsight-compute-13-0`). GPU hardware-counter permissions are required. If the
-host returns `ERR_NVGPUCTRPERM`, the command fails with an explanation and releases
+`cuda-nsight-compute-13-0`). Jarvis compute collection uses `sudo -n` with the full
+`/usr/local/cuda/bin/ncu` path, as recommended by Jarvis support. The profiler and
+its target program run as root; the helper explicitly forwards CUDA library
+paths and `GPU_RESULTS_DIR`. Python still uses the configured remote venv's
+interpreter. Report ownership is restored to the SSH user for download and
+unprivileged report import. Normal runs, timelines and Modal do not use sudo.
+Passwordless sudo is required; if unavailable, the command fails without waiting
+for a password. No driver configuration, sudoers rules or system-wide counter
+permissions are changed. If the host still returns `ERR_NVGPUCTRPERM`, the command fails with an explanation and releases
 compute; it does not change driver permissions or silently fall back to timelines.
 Empty captures and unmatched filters also return nonzero. Existing five-minute
 sandbox limits and cleanup behavior apply to both profiling modes.
@@ -201,10 +208,11 @@ sandbox limits and cleanup behavior apply to both profiling modes.
 - Modal L4: timeline and compute captures verified with vector addition.
 - Jarvis RTX PRO 6000, CUDA 13.2: timeline capture verified with vector addition
   after installing `cuda-nsight-systems-13-2` on the VM.
-- The tested Jarvis VM denied unprivileged Nsight Compute counters with
-  `ERR_NVGPUCTRPERM`. The runner saved the error and paused the VM. Compute
-  profiling requires access approved by the VM administrator/provider; installing
-  the CLI alone does not grant counter permissions.
+- Jarvis RTX PRO 6000, CUDA 13.2: compute capture, hardware metrics, report download
+  and automatic pause verified with vector addition using sudo collection.
+  Earlier unprivileged captures returned `ERR_NVGPUCTRPERM`; sudo resolved it,
+  consistent with Jarvis support's guidance. The sudo path has not yet been
+  live-tested on the H100 VM or with Python workloads.
 
 
 ## Run all stages with analyze
@@ -220,6 +228,6 @@ Provider, GPU, source path, and program arguments apply to all three executions;
 inherited profiling flag. Use only that stage for ordinary benchmark timings.
 Each stage saves its own result directory and performs normal provider cleanup.
 The command stops at the first failure, preserving earlier results. On Jarvis,
-this means three resume/pause cycles; compute will fail if counters are blocked.
+this means three resume/pause cycles; compute requires noninteractive sudo for counter access.
 No stage is retried or silently skipped. Use the individual commands when you
 only need one profile to avoid extra execution time and cost.
