@@ -24,7 +24,7 @@ __global__ void vecadd(
     if (globalThreadIdx >= N) {
         return;
     }
-    int sum = vecA[globalThreadIdx] + vecB[globalThreadIdx];
+    float sum = vecA[globalThreadIdx] + vecB[globalThreadIdx];
     vecC[globalThreadIdx] = sum;
 }
 
