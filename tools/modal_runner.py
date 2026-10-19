@@ -3,6 +3,7 @@ import argparse
 from datetime import datetime, timezone
 import json
 import os
+import re
 from pathlib import Path
 import shlex
 import signal
@@ -15,6 +16,13 @@ import modal
 from modal.stream_type import StreamType
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def sandbox_name(source, mode, run_id):
+    # Modal permits ASCII alphanumerics, dashes, periods and underscores, <64 chars.
+    stem = re.sub(r'[^A-Za-z0-9_.-]+', '-', source.stem).strip('._-') or 'kernel'
+    suffix = f'-{mode}-{run_id}'
+    return stem[:63 - len(suffix)] + suffix
 
 
 def execute(sb, command, log, timeout=240):
@@ -43,7 +51,10 @@ def main():
     run_id = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ') + '-' + uuid.uuid4().hex[:8]
     results = ROOT / 'results' / run_id
     results.mkdir(parents=True)
-    metadata = dict(provider='modal', requested_gpu=gpu, source=str(source), profiled=profiling, profile_mode=profile_mode)
+    mode = 'timeline' if profile_mode in ('timeline', '1') else ('compute' if profile_mode == 'compute' else 'run')
+    name = sandbox_name(source, mode, run_id)
+    tags = dict(program=source.stem, mode=mode, run_id=run_id)
+    metadata = dict(sandbox_name=name, mode=mode, tags=tags, provider='modal', requested_gpu=gpu, source=str(source), profiled=profiling, profile_mode=profile_mode)
     sb = None
     status = 1
     try:
@@ -61,10 +72,10 @@ def main():
         with modal.enable_output():
             app = modal.App.lookup('kernel-engg-runner', create_if_missing=True)
             sb = modal.Sandbox.create('sleep', 'infinity', app=app, image=image, gpu=gpu, timeout=300,
-                                      idle_timeout=300, workdir='/workspace/src')
+                                      idle_timeout=300, workdir='/workspace/src', name=name, tags=tags)
         metadata['sandbox_id'] = sb.object_id
         (results / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
-        print(f'Modal sandbox: {sb.object_id}; GPU: {gpu}', flush=True)
+        print(f'Modal sandbox: {name}\nID: {sb.object_id}\nMode: {mode} | GPU: {gpu} | Source: {args.source}', flush=True)
         with (results / 'run.log').open('w') as log:
             setup = ['bash', '-lc', 'mkdir -p /workspace/results && nvidia-smi --query-gpu=name --format=csv,noheader']
             status = execute(sb, setup, log)

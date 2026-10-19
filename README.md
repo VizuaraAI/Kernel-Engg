@@ -37,6 +37,9 @@ Choose one provider below and use your own account.
 
 Each run uploads code to an L4 sandbox, compiles or executes it, downloads results,
 and terminates the sandbox. The first run builds the cached CUDA environment.
+Sandbox names use `<filename>-<run|timeline|compute>-<unique-id>`. The terminal
+prints the name and sandbox ID; each results folder saves both, the mode, and
+the sandbox tags in `metadata.json`.
 Usage is charged to your Modal workspace, including any available credits.
 
 ## Option 2: JarvisLabs
