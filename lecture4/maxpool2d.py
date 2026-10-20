@@ -55,6 +55,10 @@ def main():
     print(input_mat_np)
     print(output_mat_np)
     print(output_mat_np.shape)
+    import numpy as np
+    expected = input_mat_np.reshape(output_n, pool_size, output_n, pool_size).max(axis=(1, 3))
+    np.testing.assert_allclose(output_mat_np, expected)
+    print("PASS: GPU output matches NumPy max pooling")
     
     
     

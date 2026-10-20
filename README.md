@@ -1,11 +1,133 @@
 # Kernel Engineering
 
-Code for the Kernel Engineering Workshop by [Vizuara](https://vizuara.ai). Each lecture has its own folder with the
-programs we run in class, so you can repeat the measurements from the lecture on a GPU of your own.
+Exercises for the [Vizuara Kernel Engineering Workshop](https://vizuara.ai).
+Edit code on your Mac and run it on a remote GPU with Modal or JarvisLabs.
+No local GPU or CUDA installation is required.
 
-The GPU work runs on [Modal](https://modal.com), a cloud service that rents you a GPU by the second. Your laptop only
-sends the code and shows the results, so you need a Modal account and Python 3 on your laptop (we tested with Python
-3.11), not a GPU. New Modal accounts get free monthly credits; see [modal.com/pricing](https://modal.com/pricing).
+## Install the utilities
+
+Install [Homebrew](https://brew.sh/) if needed, then:
+
+```bash
+git clone https://github.com/utkarshparekh/Kernel-Engg.git
+cd Kernel-Engg
+brew install just jq uv
+```
+
+Already cloned? Run the remaining commands from your repository root.
+Choose one provider below and use your own account.
+
+## Option 1: Modal
+
+1. Create a [Modal account](https://modal.com/) and enable GPU access.
+2. Run setup and complete the browser login:
+
+   ```bash
+   just setup modal
+   ```
+
+   Setup installs the SDK in the project's `.venv` and selects Modal as default.
+   No environment activation is needed.
+3. Run a kernel:
+
+   ```bash
+   just run lecture4/vecadd.cu
+   just run lecture4/maxpool2d.py
+   ```
+
+Each run uploads code to an L4 sandbox, compiles or executes it, downloads results,
+and terminates the sandbox. The first run builds the cached CUDA environment.
+Sandbox names use `<filename>-<run|timeline|compute>-<unique-id>`. The terminal
+prints the name and sandbox ID; each results folder saves both, the mode, and
+the sandbox tags in `metadata.json`.
+Usage is charged to your Modal workspace, including any available credits.
+
+## Option 2: JarvisLabs
+
+1. Create an Ubuntu GPU **VM** in [JarvisLabs](https://jarvislabs.ai/) with a
+   unique name. It needs `/usr/local/cuda/bin/nvcc`, `rsync`, and GNU `timeout`.
+2. Register your Mac's SSH public key with JarvisLabs. If needed, create a key:
+
+   ```bash
+   ssh-keygen -t ed25519
+   ```
+
+   Register `~/.ssh/id_ed25519.pub`; keep the private key on your Mac.
+3. Install the CLI and configure the runner:
+
+   ```bash
+   brew install rsync
+   uv tool install jarvislabs
+   just setup jarvis
+   ssh-add ~/.ssh/id_ed25519
+   ```
+
+   Setup asks for your API token and exact instance name, then selects Jarvis as
+   default. The runner uses SSH user `ubuntu` and port 22.
+4. Run CUDA code from your Mac:
+
+   ```bash
+   just run lecture4/vecadd.cu
+   ```
+
+The runner resumes the VM if needed, discovers its current IP, waits for CUDA,
+uploads and runs code, downloads results, and pauses the VM afterward—even after
+failure. It also pauses an already-running VM; do not share it with concurrent jobs.
+
+### Jarvis: Python examples only
+
+For Python examples with a `requirements.txt` beside the source (including
+`lecture3/dog.py`), the runner installs those dependencies into the remote venv
+before execution or profiling. Installation runs as the SSH user, before sudo.
+
+Resume the VM and connect using the dashboard's SSH command. With Python 3.12 and
+CUDA 13.x installed, run **on the VM**:
+
+```bash
+python3 -m venv /home/ubuntu/cuda-workspace/.venv
+/home/ubuntu/cuda-workspace/.venv/bin/python -m pip install \
+  numba-cuda==0.30.4 cupy-cuda13x==14.2.0 numpy==2.3.5
+```
+
+If Python reports missing venv support, install `python3.12-venv` first.
+Then return to your Mac and run:
+
+```bash
+just run lecture4/maxpool2d.py
+```
+
+## Switch providers
+
+After setting up both providers, save a default:
+
+```bash
+just provider modal
+# Or:
+just provider jarvis
+```
+
+Override the provider or Modal GPU for one run:
+
+```bash
+just provider=jarvis run lecture4/vecadd.cu
+just provider=modal gpu=A100 run lecture4/vecadd.cu
+```
+
+## Results and settings
+
+- `just status` shows the selected provider.
+- Logs and exit codes are in `results/<run-id>/`.
+- Write output files to `$GPU_RESULTS_DIR` for automatic download.
+- Settings are saved locally in `.gpu.json`; settings, results, and `.venv` are
+  ignored by Git. Never commit API tokens or private keys.
+- If a run is force-killed or loses connectivity, check the provider dashboard
+  to confirm compute stopped.
+
+See [tools/GPU.md](tools/GPU.md) for custom SSH settings, timeouts, and limitations.
+The Jarvis runner disables server host-key verification for its connections;
+this accommodates rotating keys but cannot detect server impersonation.
+
+## Lecture-specific instructions
 
 | Folder | Lecture | What you run |
 |---|---|---|
@@ -13,4 +135,34 @@ sends the code and shows the results, so you need a Modal account and Python 3 o
 | [`lecture3`](lecture3) | Lecture 3: How does a GPU run your code? | Time the lecture's CUDA kernels on a photo of a dog on one H100, and count the warps whose 32 threads disagree at an if. |
 | [`assignment1`](assignment1) | Assignment 1: Rooflines, arithmetic intensity and the memory hierarchy | The handout and its four experiments on one H100: the GPU's two ceilings and its L2, the roofline traced with real matmuls, coalescing and bytes in flight, and RoPE four ways. |
 
-We add a folder here after each lecture is taught.
+Programs that already manage Modal themselves, such as `lecture3/dog.py`, use
+their lecture's documented `modal run` command instead of `just run`.
+
+## Profile GPU execution
+
+```bash
+just timeline-profile lecture4/vecadd.cu
+```
+
+Prints kernel and memory-transfer timing summaries in the terminal and saves
+Nsight Systems reports in `results/<run-id>/artifacts/profile/`. Compute is
+released afterward. See [profiling setup and limitations](tools/GPU.md#profile-from-the-terminal).
+
+For per-kernel hardware metrics (subject to provider permissions):
+
+```bash
+just kernel=rgb_to_gray compute-profile lecture3/dog.py
+```
+
+This selects one matching launch. See [compute profiling](tools/GPU.md#compute-profiling-from-the-terminal)
+for filters, metrics and counter-access requirements.
+
+Run the benchmark and both profiles sequentially with one command:
+
+```bash
+just kernel=rgb_to_gray analyze lecture3/dog.py
+```
+
+This executes the program three times and uses more compute than `just run`.
+Each stage prints its own results path and releases compute. Execution stops if
+any stage fails; use the first stage's timings for benchmark comparisons.
