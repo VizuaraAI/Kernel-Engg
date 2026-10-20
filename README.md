@@ -129,10 +129,11 @@ this accommodates rotating keys but cannot detect server impersonation.
 
 ## Lecture-specific instructions
 
-| Folder | Exercises |
-|---|---|
-| [lecture1](lecture1) | H100 bandwidth measurements and Qwen3-8B serving |
-| [lecture3](lecture3) | CUDA image kernels and warp divergence |
+| Folder | Lecture | What you run |
+|---|---|---|
+| [`lecture1`](lecture1) | Lecture 1: How fast can this go? | Measure an H100's two speed limits, serve Qwen3-8B on it with vLLM, and chat with your model from a browser. |
+| [`lecture3`](lecture3) | Lecture 3: How does a GPU run your code? | Time the lecture's CUDA kernels on a photo of a dog on one H100, and count the warps whose 32 threads disagree at an if. |
+| [`assignment1`](assignment1) | Assignment 1: Rooflines, arithmetic intensity and the memory hierarchy | The handout and its four experiments on one H100: the GPU's two ceilings and its L2, the roofline traced with real matmuls, coalescing and bytes in flight, and RoPE four ways. |
 
 Programs that already manage Modal themselves, such as `lecture3/dog.py`, use
 their lecture's documented `modal run` command instead of `just run`.
