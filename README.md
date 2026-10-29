@@ -14,3 +14,12 @@ sends the code and shows the results, so you need a Modal account and Python 3 o
 | [`assignment1`](assignment1) | Assignment 1: Rooflines, arithmetic intensity and the memory hierarchy | The handout and its four experiments on one H100: the GPU's two ceilings and its L2, the roofline traced with real matmuls, coalescing and bytes in flight, and RoPE four ways. |
 
 We add a folder here after each lecture is taught.
+
+## Nvidia GPU Whitepapers
+
+* Blackwell Architecture: https://images.nvidia.com/aem-dam/Solutions/geforce/blackwell/nvidia-rtx-blackwell-gpu-architecture.pdf
+* Hopper Architecture: https://resources.nvidia.com/en-us-hopper-architecture/nvidia-h100-tensor-c
+* Ada Architecture: https://images.nvidia.com/aem-dam/Solutions/geforce/ada/nvidia-ada-gpu-architecture.pdf
+* Ampere Architecture: https://www.nvidia.com/content/PDF/nvidia-ampere-ga-102-gpu-architecture-whitepaper-v2.pdf
+* Turing Architecture: https://images.nvidia.com/aem-dam/en-zz/Solutions/design-visualization/technologies/turing-architecture/NVIDIA-Turing-Architecture-Whitepaper.pdf
+* Tesla Architecture: https://images.nvidia.com/content/volta-architecture/pdf/volta-architecture-whitepaper.pdf
