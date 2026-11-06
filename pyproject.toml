@@ -1,0 +1,9 @@
+[project]
+name = "kernel-engg"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "cupy-cuda13x>=14.2.0",
+    "numba-cuda[cu13]>=0.30.4",
+    "numpy<2.4",
+]

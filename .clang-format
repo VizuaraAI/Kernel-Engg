@@ -1,0 +1,12 @@
+BasedOnStyle: LLVM
+PointerAlignment: Left
+IndentWidth: 4
+ColumnLimit: 150
+#AlignConsecutiveDeclarations:
+#  Enabled: true
+#  AcrossEmptyLines: true
+#  AcrossComments: true
+#AlignConsecutiveAssignments:
+#  Enabled: true
+#  AcrossEmptyLines: true
+#  AcrossComments: true
