@@ -45,7 +45,8 @@ def main():
     blocks_per_grid = (
         int(cp.ceil((output_n * output_n) / threads_per_block[0])), 1
     )
-    
+
+    # maxpool2d[(6104,1), (1024,1)]
     maxpool2d[blocks_per_grid, threads_per_block](input_mat, output_mat, pool_size)
     device.synchronize()
     

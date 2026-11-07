@@ -57,7 +57,7 @@ Download [Nsight Compute](https://developer.nvidia.com/tools-overview/nsight-com
 
 ```bash
 nvcc vecadd.cu -o vecadd
-ncu --set full -f -o vecadd_profil e.ncu-rep ./vecadd
+ncu --set full -f -o vecadd_profile.ncu-rep ./vecadd
 ```
 
 
