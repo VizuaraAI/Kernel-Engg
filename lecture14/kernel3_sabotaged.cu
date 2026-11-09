@@ -55,28 +55,12 @@ int main() {
     dim3 block(256);
     dim3 grid(4);
 
-    // Warm-up launch
+    // Launch kernel once
     compute_pipeline_sabotaged<<<grid, block>>>(d_in, d_out, N);
     cudaDeviceSynchronize();
 
-    // Timed launch
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
-    for (int i = 0; i < 10; ++i) {
-        compute_pipeline_sabotaged<<<grid, block>>>(d_in, d_out, N);
-    }
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-
-    float ms = 0.0f;
-    cudaEventElapsedTime(&ms, start, stop);
-    std::cout << "[Kernel 3 SABOTAGED] Average Duration: " << (ms / 10.0f) << " ms\n";
-
     cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
-    std::cout << "Sample result out[0]: " << h_out[0] << "\n";
+    std::cout << "[Kernel 3 SABOTAGED] out[0]: " << h_out[0] << "\n";
 
     cudaFree(d_in);
     cudaFree(d_out);

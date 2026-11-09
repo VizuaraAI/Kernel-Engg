@@ -59,28 +59,12 @@ int main() {
     dim3 block(32, 32);
     dim3 grid(N / block.x, N / block.y);
 
-    // Warm-up launch
+    // Launch kernel once
     matmul_sabotaged<<<grid, block>>>(d_A, d_B, d_C, N);
     cudaDeviceSynchronize();
 
-    // Timed launch
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
-    for (int i = 0; i < 10; ++i) {
-        matmul_sabotaged<<<grid, block>>>(d_A, d_B, d_C, N);
-    }
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-
-    float ms = 0.0f;
-    cudaEventElapsedTime(&ms, start, stop);
-    std::cout << "[Kernel 1 SABOTAGED] Average Duration: " << (ms * 100.0f) << " us\n";
-
     cudaMemcpy(h_C, d_C, bytes, cudaMemcpyDeviceToHost);
-    std::cout << "Sample result C[0]: " << h_C[0] << " (Expected: " << (N * 2.0f) << ")\n";
+    std::cout << "[Kernel 1 SABOTAGED] C[0]: " << h_C[0] << " (Expected: " << (N * 2.0f) << ")\n";
 
     cudaFree(d_A);
     cudaFree(d_B);

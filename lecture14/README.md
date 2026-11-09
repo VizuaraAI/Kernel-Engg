@@ -1,5 +1,7 @@
 # Lecture 14: CUDA Performance Triage Lab with Nsight Compute
 
+![](images/ncu_working.png)
+
 This lab implements a hands-on performance debugging curriculum based directly on the **[NVIDIA Nsight Compute Compute Triage Guide](https://docs.nvidia.com/nsight-compute/ComputeTriage/index.html)** and Chapter 7 (*Reading the Profiler*).
 
 To make learning straightforward, each exercise provides **two separate, minimal CUDA C++ files** (a sabotaged version and a fixed version):
@@ -9,7 +11,6 @@ To make learning straightforward, each exercise provides **two separate, minimal
 
 Students profile the sabotaged kernel, identify the root cause using the official triage decision tree, profile the fixed kernel, and use Nsight Compute's **Set Baseline** feature to measure the exact differences.
 
----
 
 ## NVIDIA Triage Decision Flowchart
 
@@ -121,3 +122,12 @@ ncu --set full --import-source yes --clock-control none --cache-control none -f 
    - `sm__cycles_active.min > 0` (all SMs balanced).
    - Compute Throughput jumps from ~3% to **>70%**.
    - Execution time drops by **>25x**.
+
+## Metrics:
+
+* `l1tex__t_sectors_pipe_lsu_mem_global_op_ld.sum` 
+* `l1tex__t_requests_pipe_lsu_mem_global_op_ld.sum`
+* `l1tex__t_sectors_pipe_lsu_mem_global_op_st.sum` 
+* `l1tex__t_requests_pipe_lsu_mem_global_op_st.sum`
+* `l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum`
+* `l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_st.sum`

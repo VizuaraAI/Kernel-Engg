@@ -67,28 +67,12 @@ int main() {
     dim3 block(TILE_DIM, BLOCK_ROWS);
     dim3 grid(WIDTH / TILE_DIM, HEIGHT / TILE_DIM);
 
-    // Warm-up launch
+    // Launch kernel once
     transpose_fixed<<<grid, block>>>(d_in, d_out, WIDTH, HEIGHT);
     cudaDeviceSynchronize();
 
-    // Timed launch
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    cudaEventRecord(start);
-    for (int i = 0; i < 20; ++i) {
-        transpose_fixed<<<grid, block>>>(d_in, d_out, WIDTH, HEIGHT);
-    }
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-
-    float ms = 0.0f;
-    cudaEventElapsedTime(&ms, start, stop);
-    std::cout << "[Kernel 2 FIXED] Average Duration: " << (ms * 50.0f) << " us\n";
-
     cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
-    std::cout << "Sample transposed out[1 * HEIGHT + 0]: " << h_out[1 * HEIGHT + 0] 
+    std::cout << "[Kernel 2 FIXED] Transposed out[1 * HEIGHT + 0]: " << h_out[1 * HEIGHT + 0] 
               << " (Expected: " << h_in[0 * WIDTH + 1] << ")\n";
 
     cudaFree(d_in);
