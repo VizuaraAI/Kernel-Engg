@@ -22,6 +22,7 @@
 - https://www.youtube.com/live/uiIdk61UxEs?si=Zqm8hAd_Raq7MDhp
 - https://github.com/NVIDIA/cutile-python/tree/main/test/kernels
 - https://github.com/NVIDIA/TileGym/tree/main/src/tilegym/ops/cutile
+- https://developer.nvidia.com/blog/advancing-gpu-programming-with-the-cuda-tile-ir-backend-for-openai-triton/
 
 ### PyTorch Helion
 
@@ -32,3 +33,8 @@
 - https://youtu.be/MBOPzfl1JBo?si=ioNCLPcTUixFIS28
 - https://helionlang.com/examples/index.html
 - https://www.spheron.network/blog/helion-explained-meta-s-pytorch-native-gpu-kernel-dsl-2026/
+
+### CUTLASS
+
+- https://developer.nvidia.com/blog/cutlass-linear-algebra-cuda/
+- https://github.com/NVIDIA/cutlass/tree/main/examples
