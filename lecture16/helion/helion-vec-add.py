@@ -1,7 +1,7 @@
 import torch
 import helion
 import helion.language as hl
-from lecture15.utils import benchmark_kernel
+from lecture16.utils import benchmark_kernel
 
 @helion.kernel(config = helion.Config(block_sizes = [32,]))
 def vec_add_kernel_manual_tuning(
