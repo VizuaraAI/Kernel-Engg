@@ -103,14 +103,15 @@ def flash_attention(N, d) -> torch.Tensor:
     V = torch.matmul(input_seq, WV)
     O = torch.zeros((N, d), dtype=Q.dtype, device=Q.device)
     grid = lambda meta: (triton.cdiv(N, B_r),)
+    start = time.perf_counter_ns()
     flash_attention_kernel[grid](Q, K, V, O,
                                  Q.stride(0), Q.stride(1),
                                  K.stride(0), K.stride(1),
                                  V.stride(0), V.stride(1),
                                  O.stride(0), O.stride(1),
                                  N, d, B_c, B_r)
-
-    return O
+    end = time.perf_counter_ns()
+    return O, (end - start) / 10 ** 6
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -121,20 +122,16 @@ d = 128
 N_values = [2048 * (2 ** i) for i in range(8)]
 
 # assert if the kernel computes the correct outputs
-actual = flash_attention(N_values[0], d)
-expected = vanilla_attention(N_values[0], d)
+actual, _ = flash_attention(N_values[0], d)
+expected, _ = vanilla_attention(N_values[0], d)
 torch.testing.assert_close(actual, expected, atol=1e-2, rtol=1e-2)
 
 for N in N_values:
     print("Testing for N =", N)
     print("Compiling kernel (warm-up)...")
     _ = flash_attention(N, d)
-
     torch.cuda.synchronize()
-    start = time.perf_counter_ns()
-    O = flash_attention(N, d)
+    O, time_taken = flash_attention(N, d)
     torch.cuda.synchronize()
-    end = time.perf_counter_ns()
-
-    print(f"Execution time is {(end - start) / 10 ** 6:.3f} ms")
+    print(f"Execution time is {time_taken:.3f} ms")
     print("--------------------------------------------------------------------------")

@@ -67,26 +67,26 @@ def flash_attention(N: int, d: int, device: torch.device) -> torch.Tensor:
     Q = torch.matmul(input_seq, WQ)
     K = torch.matmul(input_seq, WK)
     V = torch.matmul(input_seq, WV)
-    return flash_attention_kernel(Q, K, V)
+
+    start = time.perf_counter_ns()
+    O = flash_attention_kernel(Q, K, V)
+    end = time.perf_counter_ns()
+    return O, (end - start) / 10 ** 6
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 d = 128
 N_values = [2048 * (2 ** i) for i in range(8)]
 
-actual = flash_attention(N_values[0], d, device)
+actual, _ = flash_attention(N_values[0], d, device)
 torch.manual_seed(0)
-expected = vanilla_attention(N_values[0], d)
+expected, _ = vanilla_attention(N_values[0], d)
 torch.testing.assert_close(actual, expected, atol=1e-2, rtol=1e-2)
 
 for N in N_values:
     print("Testing for N =", N)
     _ = flash_attention(N, d, device)  # warm-up / autotune
-
     torch.cuda.synchronize()
-    start = time.perf_counter_ns()
-    O = flash_attention(N, d, device)
+    _, time_taken = flash_attention(N, d, device)
     torch.cuda.synchronize()
-    end = time.perf_counter_ns()
-
-    print(f"Execution time is {(end - start) / 10 ** 6:.3f} ms")
+    print(f"Execution time is {time_taken:.3f} ms")

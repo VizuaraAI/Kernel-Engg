@@ -21,12 +21,14 @@ def vanilla_attention(
     Q = torch.matmul(input_seq, WQ)  # dims: (N, d)
     K = torch.matmul(input_seq, WK)  # dims: (N, d)
     V = torch.matmul(input_seq, WV)  # dims: (N, d)
-    attention = torch.matmul(Q, K.T)  # dims: (N, N)
 
+    start = time.perf_counter_ns()
+    attention = torch.matmul(Q, K.T)  # dims: (N, N)
     attention = attention.masked_fill(mask, float("-inf"))
     attn_weights = F.softmax(attention, dim=-1)
     O = torch.matmul(attn_weights, V)  # dims: (N, d)
-    return O
+    end = time.perf_counter_ns()
+    return O, (end - start) / 10 ** 6
 
 
 def main():
@@ -36,14 +38,10 @@ def main():
         print("Testing for N =", N)
         print("Compiling kernel (warm-up)...")
         _ = vanilla_attention(N, d)
-
         torch.cuda.synchronize()
-        start = time.perf_counter_ns()
-        _ = vanilla_attention(N, d)
+        _, time_taken = vanilla_attention(N, d)
         torch.cuda.synchronize()
-        end = time.perf_counter_ns()
-
-        print(f"Execution time is {(end - start) / 10 ** 6:.3f} ms")
+        print(f"Execution time is {time_taken:.3f} ms")
         print("--------------------------------------------------------------------------")
 
 

@@ -24,13 +24,19 @@ def flash_attention_kernel(
         shape=(B_r, d)
     )
 
-    # 2. initialize O_i, l, m
+    # running statistics used for computation of softmax:
+    # (1) running sum of exp sums (row-wise)
     l_i = ct.zeros((B_r, 1), dtype=ct.float32)
+    # (2) max of elements (row-wise)
     m_i = ct.full((B_r, 1), dtype=ct.float32, fill_value=-float('inf'))
+
+    # output matrix
     O_i = ct.zeros((B_r, d), dtype=ct.float32)
 
     num_tiles_along_c = ct.num_tiles(K, shape=(B_c, d), axis=0)
     end_tile = min(ct.cdiv((bid + 1) * B_r, B_c), num_tiles_along_c)
+    # if B_r = B_c, end_tile = bid + 1
+    # hence 0 <= j < bid
     for j in range(end_tile):
         K_j = ct.load(
             K,
@@ -44,6 +50,7 @@ def flash_attention_kernel(
             shape=(B_c, d)
         )
 
+        # Note: any operation along axis=1 is rowwise
         S_ij = ct.matmul(Q_i, ct.transpose(K_j))
         col_idx = j * B_c + ct.arange(B_c, dtype=ct.int32)[None, :]
         row_idx = bid * B_r + ct.arange(B_r, dtype=ct.int32)[:, None]  # shape: (B_r, 1)
@@ -80,14 +87,20 @@ def flash_attention(N, d) -> torch.Tensor:
     K = torch.matmul(input_seq, WK)
     V = torch.matmul(input_seq, WV)
     O = torch.zeros((N, d), dtype=Q.dtype, device=Q.device)
-    grid = (ct.cdiv(N, B_r), 1, 1)
+    grid = (
+        ct.cdiv(N, B_r),  # ct.bid(axis=0)
+        1,
+        1
+    )
+    start = time.perf_counter_ns()
     ct.launch(
         torch.cuda.current_stream(),
         grid,
         flash_attention_kernel,
         (Q, K, V, O, N, d, B_c, B_r)
     )
-    return O
+    end = time.perf_counter_ns()
+    return O, (end - start) / 10 ** 6
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -98,20 +111,17 @@ d = 128
 N_values = [2048 * (2 ** i) for i in range(8)]
 
 # assert if the kernel computes the correct outputs
-actual = flash_attention(N_values[0], d)
-expected = vanilla_attention(N_values[0], d)
+actual, _ = flash_attention(N_values[0], d)
+expected, _ = vanilla_attention(N_values[0], d)
 torch.testing.assert_close(actual, expected, atol=1e-2, rtol=1e-2)
 
 for N in N_values:
     print("Testing for N =", N)
     print("Compiling kernel (warm-up)...")
     _ = flash_attention(N, d)
-
     torch.cuda.synchronize()
-    start = time.perf_counter_ns()
-    O = flash_attention(N, d)
+    _, time_taken = flash_attention(N, d)
     torch.cuda.synchronize()
     end = time.perf_counter_ns()
-
-    print(f"Execution time is {(end - start) / 10 ** 6:.3f} ms")
+    print(f"Execution time is {time_taken:.3f} ms")
     print("--------------------------------------------------------------------------")
