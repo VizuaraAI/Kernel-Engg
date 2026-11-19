@@ -10,6 +10,8 @@ add_executable(
         lecture04-vecadd
         common/cuda_utils.cuh
         lecture4/vecadd.cu
+        lecture18/flashattention3.cu
+        lecture18/flashattention4.cu
 )
 
 # ============ Lecture 12 - Tensor Cores ===========================
@@ -22,4 +24,21 @@ add_executable(
         lecture12-tc-02
         common/cuda_utils.cuh
         lecture12/tc-02.cu
+)
+add_executable(
+        lecture12-mma-ldmatrix
+        common/cuda_utils.cuh
+        lecture12/mma-ldmatrix.cu
+)
+
+# ============ Lecture 18 - Flash Attention ========================
+add_executable(
+        lecture18-fa3
+        common/cuda_utils.cuh
+        lecture18/flashattention3.cu
+)
+add_executable(
+        lecture18-fa4
+        common/cuda_utils.cuh
+        lecture18/flashattention4.cu
 )
