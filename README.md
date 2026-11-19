@@ -12,6 +12,7 @@ sends the code and shows the results, so you need a Modal account and Python 3 o
 | [`lecture1`](lecture1) | Lecture 1: How fast can this go? | Measure an H100's two speed limits, serve Qwen3-8B on it with vLLM, and chat with your model from a browser. |
 | [`lecture3`](lecture3) | Lecture 3: How does a GPU run your code? | Time the lecture's CUDA kernels on a photo of a dog on one H100, and count the warps whose 32 threads disagree at an if. |
 | [`assignment1`](assignment1) | Assignment 1: Rooflines, arithmetic intensity and the memory hierarchy | The handout and its four experiments on one H100: the GPU's two ceilings and its L2, the roofline traced with real matmuls, coalescing and bytes in flight, and RoPE four ways. |
+| [`assignment2`](assignment2) | Assignment 2: Climbing the matmul ladder, and tuning it for three shapes | The handout, a harness that checks and times your own kernels 2 to 7 on one H100, the one-knob sweeps, and an autotuner for Qwen3-8B's up-projection at 128, 1,024 and 8,192 tokens. |
 
 We add a folder here after each lecture is taught.
 

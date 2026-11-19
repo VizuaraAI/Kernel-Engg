@@ -1,0 +1,5 @@
+{
+ "128":  {"family": "k7", "params": {"BM": 128, "BN": 128, "BK": 16, "WM": 64, "WN": 64, "WNITER": 4, "TM": 8, "TN": 4}},
+ "1024": {"family": "k7", "params": {"BM": 128, "BN": 128, "BK": 16, "WM": 64, "WN": 64, "WNITER": 4, "TM": 8, "TN": 4}},
+ "8192": {"family": "k7", "params": {"BM": 128, "BN": 128, "BK": 16, "WM": 64, "WN": 64, "WNITER": 4, "TM": 8, "TN": 4}}
+}
