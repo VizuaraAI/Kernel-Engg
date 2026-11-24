@@ -36,6 +36,13 @@ add_executable(
         lecture18/flashattention3.cu
 )
 
+# ============ Lecture 20 - Flash Attention 4 ========================
+add_executable(
+        lecture20-fa4
+        common/cuda_utils.cuh
+        lecture20/flashattention4.cu
+)
+
 # ============ misc ================================================
 add_executable(
         misc-mbarriers-basics
