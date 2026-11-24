@@ -1,7 +1,7 @@
 BasedOnStyle: LLVM
 PointerAlignment: Left
 IndentWidth: 4
-ColumnLimit: 150
+ColumnLimit: 100
 #AlignConsecutiveDeclarations:
 #  Enabled: true
 #  AcrossEmptyLines: true
