@@ -3,7 +3,7 @@ project(kernel-engineering-workshop LANGUAGES CXX CUDA)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CUDA_ARCHITECTURES 89)
+set(CMAKE_CUDA_ARCHITECTURES native)
 
 # ============ Lecture 4 - First Kernels ===========================
 add_executable(
@@ -23,11 +23,6 @@ add_executable(
         common/cuda_utils.cuh
         lecture12/tc-02.cu
 )
-add_executable(
-        lecture12-mma-ldmatrix
-        common/cuda_utils.cuh
-        lecture12/mma-ldmatrix.cu
-)
 
 # ============ Lecture 18 - Flash Attention ========================
 add_executable(
@@ -46,9 +41,13 @@ add_executable(
 # ============ misc ================================================
 add_executable(
         misc-mbarriers-basics
-        misc/memory-barriers/basics.cu
+        misc/async-barrier-basics.cu
 )
 add_executable(
         misc-mbarriers-producer-consumer
-        misc/memory-barriers/producer-consumer.cu
+        misc/mbarrier-producer-consumer.cu
+)
+add_executable(
+        misc-tma-basics
+        misc/tma-basics.cu
 )
