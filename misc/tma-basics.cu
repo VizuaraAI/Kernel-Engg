@@ -12,6 +12,10 @@ namespace ptx = cuda::ptx;
 __device__ inline bool isElected() {
     int tid = threadIdx.x;
     int warpId = tid / 32;
+    // the variable uniformWarpId for every thread in the warp
+    // would contain the quantity held by value from thread 0 in the warp.
+    // thread 0 has "broadcast" its value to other threads.
+    // https://stackoverflow.com/a/76123988
     int uniformWarpId = __shfl_sync(0xFFFFFFFF, warpId, 0);
     return (uniformWarpId == 0) && (ptx::elect_sync(0xFFFFFFFF));
 }
@@ -25,6 +29,8 @@ __global__ void addVectorKernel(const float* vec, float* output, const int N) {
     float* outputBlock = output + blockIdx.x * N_ELEMENTS_IN_BLOCK;
 
     if (threadIdx.x == 0) {
+        // The barrier is initialized with the number of threads participating in the block.
+        // As a result, the barrier will flip only if all threads have arrived on this barrier.
         init(&barrier, N_ELEMENTS_IN_BLOCK);
     }
     __syncthreads();
