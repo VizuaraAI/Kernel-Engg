@@ -1,5 +1,7 @@
-To generate Nsight Compute reports:
+To generate Nsight Compute reports, use `generate_ncu_reports.py`.
 
-```shell
-sudo env "PATH=$PATH" ncu -f -o kernel01.ncu-rep ./lecture21-kernel01
-```
+* Kernel 1: Same as `lecture10/matmul-06.py`
+* Kernel 2: Tensor Cores + TMA
+* Kernel 3: Producer/Consumer Pattern
+* Kernel 4: Kernel 2 with WGMMA API (CUTLASS)
+* Kernel 5: Kernel 4 with Producer/Consumer Pattern (CUTLASS)

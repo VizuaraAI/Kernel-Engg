@@ -34,18 +34,6 @@ constexpr int WARP_TILES_N = WN / WMMA_N;
 constexpr int NUM_WARPS = (BM / WM) * (BN / WN);
 constexpr int NT = NUM_WARPS * WARP_SIZE;
 
-__device__ __forceinline__ bool elect_one_sync() {
-    uint32_t pred;
-    asm volatile(
-        "{\n"
-        ".reg .pred p;\n"
-        "elect.sync _|p, %1;\n"
-        "selp.b32 %0, 1, 0, p;\n"
-        "}\n"
-        : "=r"(pred)
-        : "r"(0xFFFFFFFFu));
-    return pred != 0;
-}
 // Elect a single thread in warp 0 to issue TMA bulk copies
 __device__ __forceinline__ bool isElected() {
     int warp_id = threadIdx.x / WARP_SIZE;

@@ -1,6 +1,8 @@
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cublas_v2.h>
+#include <cuda_fp16.h>
 #include <cuda_runtime.h>
 #include <vector>
 #include "../common/cuda_utils.cuh"
@@ -15,44 +17,42 @@
         }                                                                               \
     } while (0)
 
-void matmul_cublas(cublasHandle_t handle, const float* dA, const float* dB, float* dC, int m,
+void matmul_cublas(cublasHandle_t handle, const half* dA, const half* dB, float* dC, int m,
                    int n, int k) {
     const float alpha = 1.0f;
     const float beta = 0.0f;
 
-    CUBLAS_CHECK(cublasSgemm(handle,
-                             CUBLAS_OP_N, CUBLAS_OP_N,
-                             n, m, k,        // dims of C^T (n x m), inner dim k
-                             &alpha,
-                             dB, n,          // B^T as column-major: (n x k), ld = n
-                             dA, k,          // A^T as column-major: (k x m), ld = k
-                             &beta,
-                             dC, n));        // C^T as column-major: (n x m), ld = n
+    CUBLAS_CHECK(cublasGemmEx(handle,
+                              CUBLAS_OP_N, CUBLAS_OP_N,
+                              n, m, k,                        // dims of C^T (n x m), inner dim k
+                              &alpha,
+                              dB, CUDA_R_16F, n,              // B^T as column-major: (n x k), ld = n
+                              dA, CUDA_R_16F, k,              // A^T as column-major: (k x m), ld = k
+                              &beta,
+                              dC, CUDA_R_32F, n,              // C^T as column-major: (n x m), ld = n
+                              CUBLAS_COMPUTE_32F,             // FP32 accumulation on FP16 Tensor Cores
+                              CUBLAS_GEMM_DEFAULT_TENSOR_OP));
 }
 
 int main() {
-    // Unlike the hand-written kernel, cuBLAS has no divisibility requirements.
+    // Unlike the hand-written kernels, cuBLAS has no divisibility requirements.
     const int m = 4096, k = 4096, n = 4096;
 
-    std::vector<float> hA((size_t)m * k, 2.0f);
-    std::vector<float> hB((size_t)k * n, 3.0f);
+    std::vector<half> hA((size_t)m * k, __float2half(2.0f));
+    std::vector<half> hB((size_t)k * n, __float2half(3.0f));
     std::vector<float> hC((size_t)m * n, 0.0f);
 
-    float *dA, *dB, *dC;
-    CUDA_CHECK(cudaMalloc(&dA, hA.size() * sizeof(float)));
-    CUDA_CHECK(cudaMalloc(&dB, hB.size() * sizeof(float)));
+    half *dA, *dB;
+    float *dC;
+    CUDA_CHECK(cudaMalloc(&dA, hA.size() * sizeof(half)));
+    CUDA_CHECK(cudaMalloc(&dB, hB.size() * sizeof(half)));
     CUDA_CHECK(cudaMalloc(&dC, hC.size() * sizeof(float)));
-    CUDA_CHECK(cudaMemcpy(dA, hA.data(), hA.size() * sizeof(float), cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(dB, hB.data(), hB.size() * sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(dA, hA.data(), hA.size() * sizeof(half), cudaMemcpyHostToDevice));
+    CUDA_CHECK(cudaMemcpy(dB, hB.data(), hB.size() * sizeof(half), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemset(dC, 0, hC.size() * sizeof(float)));
 
     cublasHandle_t handle;
     CUBLAS_CHECK(cublasCreate(&handle));
-
-    // Force strict FP32 (no TF32 tensor-core shortcuts) so results are comparable
-    // to the hand-written FP32 kernel. Remove this line to let cuBLAS use TF32
-    // where the hardware allows it.
-    CUBLAS_CHECK(cublasSetMathMode(handle, CUBLAS_DEFAULT_MATH));
 
     // Warm-up run (cuBLAS initialisation / kernel selection overhead)
     matmul_cublas(handle, dA, dB, dC, m, n, k);
@@ -69,8 +69,8 @@ int main() {
 
     float ms = 0.0f;
     CUDA_CHECK(cudaEventElapsedTime(&ms, start, stop));
-    const double gflops = 2.0 * m * n * (double)k / (ms * 1e-3) / 1e9;
-    printf("cuBLAS SGEMM: %.3f ms, %.1f GFLOP/s\n", ms, gflops);
+    const double tflops = 2.0 * m * n * (double)k / (ms * 1e-3) / 1e12;
+    printf("cuBLAS GemmEx (FP16->FP32): %.3f ms, %.1f TFLOP/s\n", ms, tflops);
 
     CUDA_CHECK(cudaMemcpy(hC.data(), dC, hC.size() * sizeof(float), cudaMemcpyDeviceToHost));
 

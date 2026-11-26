@@ -35,4 +35,17 @@ template <typename T> void freeMatrix(const T* hostMatrix, T* deviceMatrix) {
     cudaFree(deviceMatrix);
 }
 
+__device__ __forceinline__ bool elect_one_sync() {
+    uint32_t pred;
+    asm volatile(
+        "{\n"
+        ".reg .pred p;\n"
+        "elect.sync _|p, %1;\n"
+        "selp.b32 %0, 1, 0, p;\n"
+        "}\n"
+        : "=r"(pred)
+        : "r"(0xFFFFFFFFu));
+    return pred != 0;
+}
+
 #endif // CUDA_UTILS_CUH

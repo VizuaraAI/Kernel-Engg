@@ -54,7 +54,22 @@ add_executable(
         common/cuda_utils.cuh
         lecture21/kernel03.cu
 )
-target_include_directories(lecture21-kernel03 PRIVATE ${CMAKE_SOURCE_DIR}/external)
+
+add_executable(
+        lecture21-kernel04
+        common/cuda_utils.cuh
+        lecture21/kernel04.cu
+)
+target_include_directories(lecture21-kernel04 PRIVATE ${CMAKE_SOURCE_DIR}/external)
+set_target_properties(lecture21-kernel04 PROPERTIES CUDA_ARCHITECTURES "90a")
+
+add_executable(
+        lecture21-kernel05
+        common/cuda_utils.cuh
+        lecture21/kernel05.cu
+)
+target_include_directories(lecture21-kernel05 PRIVATE ${CMAKE_SOURCE_DIR}/external)
+set_target_properties(lecture21-kernel05 PROPERTIES CUDA_ARCHITECTURES "90a")
 
 add_executable(
         lecture21-kernel-cublas
