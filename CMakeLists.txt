@@ -38,6 +38,35 @@ add_executable(
         lecture20/flashattention4.cu
 )
 
+# ============ Lecture 21 - Beating cuBLAS on H100 ===================
+add_executable(
+        lecture21-kernel01
+        common/cuda_utils.cuh
+        lecture21/kernel01.cu
+)
+add_executable(
+        lecture21-kernel02
+        common/cuda_utils.cuh
+        lecture21/kernel02.cu
+)
+add_executable(
+        lecture21-kernel03
+        common/cuda_utils.cuh
+        lecture21/kernel03.cu
+)
+target_include_directories(lecture21-kernel03 PRIVATE ${CMAKE_SOURCE_DIR}/external)
+
+add_executable(
+        lecture21-kernel-cublas
+        common/cuda_utils.cuh
+        lecture21/kernel-cublas.cu
+)
+target_link_libraries(
+        lecture21-kernel-cublas
+        PRIVATE
+        cublas
+)
+
 # ============ misc ================================================
 add_executable(
         misc-mbarriers-basics
