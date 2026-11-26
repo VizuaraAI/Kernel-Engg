@@ -1,3 +1,8 @@
+/*
+Docs:
+https://docs.nvidia.com/cuda/cuda-programming-guide/04-special-topics/async-barriers.html#producer-consumer-pattern-using-barriers
+https://docs.nvidia.com/cuda/cuda-programming-guide/04-special-topics/async-copies.html#producer-consumer-pattern-through-warp-specialization
+*/
 #include <cuda/barrier>
 #include <cuda_runtime.h>
 #include <iostream>

@@ -1,3 +1,7 @@
+/*
+Docs:
+https://docs.nvidia.com/cuda/cuda-programming-guide/04-special-topics/async-copies.html#using-the-tensor-memory-accelerator-tma
+*/
 #include <cuda/barrier>
 #include <cuda/ptx>
 #include <cuda_runtime.h>
