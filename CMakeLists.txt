@@ -95,3 +95,7 @@ add_executable(
         misc-tma-basics
         misc/tma-basics.cu
 )
+add_executable(
+        misc-thread-block-cluster-basics
+        misc/thread-block-cluster-basics.cu
+)
