@@ -15,6 +15,11 @@ Cluster dimensions can be specified in two ways:
   - Runtime: using `cudaLaunchKernelEx` with `cudaLaunchAttributeClusterDimension`.
 
 Note: The grid dimensions must be a multiple of the cluster dimensions.
+
+Docs:
+https://docs.nvidia.com/cuda/cuda-programming-guide/01-introduction/programming-model.html#thread-block-clusters
+https://docs.nvidia.com/cuda/cuda-programming-guide/02-basics/writing-cuda-kernels.html#distributed-shared-memory
+https://docs.nvidia.com/cuda/cuda-programming-guide/04-special-topics/cooperative-groups.html#cooperative-groups
 */
 #include <cassert>
 #include <cooperative_groups.h>
